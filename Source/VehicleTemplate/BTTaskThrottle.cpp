@@ -6,15 +6,23 @@
 #include <Runtime/AIModule/Classes/BehaviorTree/BehaviorTreeTypes.h>
 #include "AIWheeledVehicleController.h"
 #include "WheeledVehicleMovementComponent4W.h"
+#include <EngineGlobals.h>
+#include <Runtime/Engine/Classes/Engine/Engine.h>
 
 EBTNodeResult::Type UBTTaskThrottle::ExecuteTask(UBehaviorTreeComponent & OwnerComp, uint8 * NodeMemory)
 {
 	AAIWheeledVehicleController* pController = Cast<AAIWheeledVehicleController>(OwnerComp.GetAIOwner());
 
 	if (pController) {
+		UBlackboardComponent* pBlackboard = OwnerComp.GetBlackboardComponent();
+
+		float ThrottleValue = pBlackboard->GetValueAsFloat("ThrottleValue");
+
 		float Throttle = 1.f;
 
-		pController->pVehicleMovementComponent->SetThrottleInput(Throttle);
+		pController->pVehicleMovementComponent->SetThrottleInput(ThrottleValue);
+
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString("Throttle  ") + FString::SanitizeFloat(ThrottleValue));
 
 		return EBTNodeResult::Succeeded;
 	}

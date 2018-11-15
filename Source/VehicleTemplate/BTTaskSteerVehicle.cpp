@@ -13,9 +13,14 @@ EBTNodeResult::Type UBTTaskSteerVehicle::ExecuteTask(UBehaviorTreeComponent& Own
 	AAIWheeledVehicleController* pController = Cast<AAIWheeledVehicleController>(OwnerComp.GetAIOwner());
 
 	if (pController) {
+
+		UBlackboardComponent* pBlackboard = OwnerComp.GetBlackboardComponent();
+
+		float SteeringValue = pBlackboard->GetValueAsFloat("SteeringValue");
+
 		float Steering = FMath::RandRange(-1.f, 1.f);
 
-		pController->pVehicleMovementComponent->SetSteeringInput(Steering);
+		pController->pVehicleMovementComponent->SetSteeringInput(SteeringValue);
 
 		return EBTNodeResult::Succeeded;
 	}
