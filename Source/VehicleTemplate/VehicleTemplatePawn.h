@@ -70,6 +70,10 @@ public:
 
 	/** Initial offset of incar camera */
 	FVector InternalCameraOrigin;
+	float CameraDistance;
+	float CameraPitch;
+	float CameraYaw;
+
 	// Begin Pawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End Pawn interface
@@ -98,6 +102,8 @@ public:
 	/** Switch between cameras */
 	void OnToggleCamera();
 	/** Handle reset VR device */
+	void OnMouseRight(float val);
+	void OnMouseUp(float val);
 	void OnResetVR();
 
 	static const FName LookUpBinding;

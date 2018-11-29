@@ -15,6 +15,10 @@
 #include "Components/TextRenderComponent.h"
 #include "Materials/Material.h"
 #include "GameFramework/Controller.h"
+#include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
+// Debug
+#include <Runtime/Engine/Public/DrawDebugHelpers.h>
+#include <Runtime/Engine/Classes/Engine/Engine.h>
 
 // Needed for VR Headset
 #if HMD_MODULE_INCLUDED
@@ -62,27 +66,30 @@ AVehicleTemplatePawn::AVehicleTemplatePawn()
 	SpringArm->TargetOffset = FVector(0.f, 0.f, 200.f);
 	SpringArm->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f));
 	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->TargetArmLength = 600.0f;
+	SpringArm->TargetArmLength = 400.0f;
 	SpringArm->bEnableCameraRotationLag = true;
-	SpringArm->CameraRotationLagSpeed = 7.f;
+	SpringArm->CameraRotationLagSpeed = 25.f;
 	SpringArm->bInheritPitch = false;
 	SpringArm->bInheritRoll = false;
 
 	// Create camera component 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera0"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
-	Camera->bUsePawnControlRotation = false;
+	Camera->bUsePawnControlRotation = true;
 	Camera->FieldOfView = 90.f;
 
 	// Create In-Car camera component 
 	InternalCameraOrigin = FVector(0.0f, -40.0f, 120.0f);
+	CameraDistance = 1000.f;
+	CameraPitch = 0.f;
+	CameraYaw = 0.f;
 
 	InternalCameraBase = CreateDefaultSubobject<USceneComponent>(TEXT("InternalCameraBase"));
 	InternalCameraBase->SetRelativeLocation(InternalCameraOrigin);
 	InternalCameraBase->SetupAttachment(GetMesh());
 
 	InternalCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("InternalCamera"));
-	InternalCamera->bUsePawnControlRotation = false;
+	InternalCamera->bUsePawnControlRotation = true;
 	InternalCamera->FieldOfView = 90.f;
 	InternalCamera->SetupAttachment(InternalCameraBase);
 
@@ -127,8 +134,8 @@ void AVehicleTemplatePawn::SetupPlayerInputComponent(class UInputComponent* Play
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AVehicleTemplatePawn::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AVehicleTemplatePawn::MoveRight);
-	PlayerInputComponent->BindAxis("LookUp");
-	PlayerInputComponent->BindAxis("LookRight");
+	PlayerInputComponent->BindAxis("LookUp", this, &AVehicleTemplatePawn::OnMouseUp);
+	PlayerInputComponent->BindAxis("LookRight", this, &AVehicleTemplatePawn::OnMouseRight);
 
 	PlayerInputComponent->BindAction("Handbrake", IE_Pressed, this, &AVehicleTemplatePawn::OnHandbrakePressed);
 	PlayerInputComponent->BindAction("Handbrake", IE_Released, this, &AVehicleTemplatePawn::OnHandbrakeReleased);
@@ -155,6 +162,15 @@ void AVehicleTemplatePawn::OnHandbrakePressed()
 void AVehicleTemplatePawn::OnHandbrakeReleased()
 {
 	GetVehicleMovementComponent()->SetHandbrakeInput(false);
+}
+
+void AVehicleTemplatePawn::OnMouseRight(float val) {
+	CameraYaw += val;
+}
+
+void AVehicleTemplatePawn::OnMouseUp(float val) {
+	CameraPitch += val;
+	CameraPitch = FMath::Clamp(CameraPitch, -90.f, 90.f);
 }
 
 void AVehicleTemplatePawn::OnToggleCamera()
@@ -216,6 +232,16 @@ void AVehicleTemplatePawn::Tick(float Delta)
 			InternalCamera->RelativeRotation = HeadRotation;
 		}
 	}
+
+	// Camera rotation
+	FRotator rot = FRotator(CameraPitch, CameraYaw, 0.f);
+	FVector rotForward = FRotationMatrix(rot).GetScaledAxis(EAxis::X);
+	FVector camPos = rotForward * -CameraDistance;
+
+	SpringArm->SetRelativeLocation(camPos);
+
+	FRotator cameraRotation = UKismetMathLibrary::FindLookAtRotation(FVector(0.f,0.f,0.f), -camPos);
+	SpringArm->SetRelativeRotation(cameraRotation);
 }
 
 void AVehicleTemplatePawn::BeginPlay()
