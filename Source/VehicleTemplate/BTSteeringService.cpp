@@ -14,6 +14,8 @@
 #include <Runtime/Engine/Public/DrawDebugHelpers.h>
 #include <Runtime/Engine/Classes/Engine/Engine.h>
 
+#define print(text) if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 1.5, FColor::Green,text)
+
 void UBTSteeringService::OnGameplayTaskActivated(UGameplayTask & task)
 {
 	//nothing here
@@ -68,16 +70,29 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	RV_TraceParams.bReturnPhysicalMaterial = false;
 
 	// Project end vector to position infront and to the right of the vehicle
-	float steerDistanceMultiplier = FMath::Max(1.f, AISpeed / 900.f);
-	float traceForwardDistance = 1200.f * 1.5f * steerDistanceMultiplier;
-	float traceRightDistance = 220.f * 1.5f * steerDistanceMultiplier;
-	float steerAvoidanceThreshold = 0.9f;
+	float steerDistanceMultiplier = FMath::Max(0.2f, AISpeed / 900.f);
+	float traceForwardDistance = 1200.f * 1.5f * steerDistanceMultiplier * 0.7f;
+	float traceRightDistance = FMath::Max(260.f, 220.f * 1.5f * steerDistanceMultiplier * FMath::Clamp(600.f / AISpeed, 0.5f, 3.f));
+	float traceDirectRightDistance = 250.f;
+	float steerAvoidanceThreshold = 0.7f;
+	float ForwardTraceOffset = 240.f;
+
+	int NumSidewaysChecks = 5;
 	
 	FVector traceEndPosition = aiPosition;
-	traceEndPosition += pAIActor->GetActorForwardVector() * traceForwardDistance;
-	traceEndPosition += pAIActor->GetActorRightVector() * traceRightDistance;
 
 	FHitResult RV_Hit(ForceInit);
+
+	AActor* pActorHitRight = NULL;
+	float NormalDotRight = 0.f;
+	bool HitRight = false;
+	
+	// Trace Direct Right
+	bool HitDirectRight = false;
+
+	traceEndPosition = aiPosition;
+	traceEndPosition += pAIActor->GetActorRightVector() * traceDirectRightDistance;
+
 	world->LineTraceSingleByChannel(
 		RV_Hit,        //result
 		aiPosition,    //start
@@ -95,23 +110,16 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		0.03
 	);
 
-	float NormalDotRight = 0.f;
-	bool HitRight = false;
-
-	AActor* pActorHitRight = RV_Hit.GetActor();
-	if (pActorHitRight && pActorHitRight != PlayerPawn) {
-		// Trace hit something, clamp steering, do not allow right turn
-		relativePositionNormalized = (RV_Hit.ImpactPoint - aiPosition).GetSafeNormal(1.f);
-		NormalDotRight = FMath::Min(0.f, FVector::DotProduct(pAIActor->GetActorForwardVector(), RV_Hit.Normal) * steerDistanceMultiplier);
-
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString("RIGHT ") + FString::SanitizeFloat(NormalDotRight));
-
-		SteeringValue = FMath::Min(-steerAvoidanceThreshold * -NormalDotRight, SteeringValue);
-		HitRight = true;
+	AActor* pActorHitDirectRight = RV_Hit.GetActor();
+	if (pActorHitDirectRight && pActorHitDirectRight != PlayerPawn) {
+		HitDirectRight = true;
 	}
 
-	// Project end vector to position infront and to the left of the vehicle
-	traceEndPosition -= pAIActor->GetActorRightVector() * (traceRightDistance * 2.f);
+	// Trace Direct Left
+	bool HitDirectLeft = false;
+
+	traceEndPosition = aiPosition;
+	traceEndPosition -= pAIActor->GetActorRightVector() * traceDirectRightDistance;
 
 	world->LineTraceSingleByChannel(
 		RV_Hit,        //result
@@ -121,24 +129,134 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		RV_TraceParams
 	);
 
+	DrawDebugPoint(
+		world,
+		traceEndPosition,
+		20,
+		FColor(255, 0, 255),
+		false,
+		0.03
+	);
+
+	AActor* pActorHitDirectLeft = RV_Hit.GetActor();
+	if (pActorHitDirectLeft && pActorHitDirectLeft != PlayerPawn) {
+		HitDirectLeft = true;
+	}
+
+	float SteerHitRight = -1.f;
+	float SteerClampRight = 0.f;
+	float SteerHitLeft = -1.f;
+	float SteerClampLeft = 0.f;
+
+	for (float i = 0; i < NumSidewaysChecks; i++) {
+		traceEndPosition = aiPosition + pAIActor->GetActorForwardVector() * ForwardTraceOffset;
+		traceEndPosition += pAIActor->GetActorForwardVector() * traceForwardDistance * (1.f / (i + 1.f));
+		traceEndPosition += pAIActor->GetActorRightVector() * traceRightDistance * (1.5f / (i + 1.f));
+
+		world->LineTraceSingleByChannel(
+			RV_Hit,        //result
+			aiPosition,    //start
+			traceEndPosition, //end
+			ECC_Pawn, //collision channel
+			RV_TraceParams
+		);
+
+		DrawDebugPoint(
+			world,
+			traceEndPosition,
+			20,
+			FColor(255, 0, 255),
+			false,
+			0.03
+		);
+
+		AActor* pActorHitRight = RV_Hit.GetActor();
+		if (pActorHitRight && pActorHitRight != PlayerPawn) {
+
+			HitRight = true;
+
+			relativePositionNormalized = (RV_Hit.ImpactPoint - aiPosition).GetSafeNormal(1.f);
+			NormalDotRight = FMath::Min(0.f, FVector::DotProduct(pAIActor->GetActorForwardVector(), RV_Hit.Normal) * steerDistanceMultiplier);
+
+			NormalDotRight = -NormalDotRight;
+
+			if (i > 0.f && NormalDotRight > 0.f) {
+				float diff = 1.f - NormalDotRight;
+
+				NormalDotRight += diff / (i + 1.f);
+			}
+
+			SteerHitRight = i;
+			SteerClampRight = -steerAvoidanceThreshold * NormalDotRight;
+		}
+	}
+
 	float NormalDotLeft = 0.f;
 	bool HitLeft = false;
 
-	AActor* pActorHitLeft = RV_Hit.GetActor();
-	if (pActorHitLeft && pActorHitLeft != PlayerPawn) {
-		// Trace hit something, clamp steering, do not allow left turn
-		relativePositionNormalized = (RV_Hit.ImpactPoint - aiPosition).GetSafeNormal(1.f);
-		NormalDotLeft = FMath::Min(0.f, FVector::DotProduct(pAIActor->GetActorForwardVector(), RV_Hit.Normal) * steerDistanceMultiplier);
+	AActor* pActorHitLeft = NULL;
 
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString("LEFT ") + FString::SanitizeFloat(NormalDotLeft));
+	// Project end vector to position infront and to the left of the vehicle
+	for (float i = 0; i < NumSidewaysChecks; i++) {
+		traceEndPosition = aiPosition + pAIActor->GetActorForwardVector() * ForwardTraceOffset;
+		traceEndPosition += pAIActor->GetActorForwardVector() * traceForwardDistance * (1.f / (i + 1.f));
+		traceEndPosition -= pAIActor->GetActorRightVector() * traceRightDistance * (1.5f / (i + 1.f));
 
-		SteeringValue = FMath::Max(steerAvoidanceThreshold * -NormalDotLeft, SteeringValue);
-		HitLeft = true;
+		world->LineTraceSingleByChannel(
+			RV_Hit,        //result
+			aiPosition,    //start
+			traceEndPosition, //end
+			ECC_Pawn, //collision channel
+			RV_TraceParams
+		);
+
+		DrawDebugPoint(
+			world,
+			traceEndPosition,
+			20,
+			FColor(255, 0, 255),
+			false,
+			0.03
+		);
+
+		AActor* pActorHitLeft = RV_Hit.GetActor();
+		if (pActorHitLeft && pActorHitLeft != PlayerPawn) {
+			HitLeft = true;
+
+			relativePositionNormalized = (RV_Hit.ImpactPoint - aiPosition).GetSafeNormal(1.f);
+			NormalDotLeft = FMath::Min(0.f, FVector::DotProduct(pAIActor->GetActorForwardVector(), RV_Hit.Normal) * steerDistanceMultiplier);
+
+			NormalDotLeft = -NormalDotLeft;
+
+			if (i > 0.f && NormalDotLeft > 0.f) {
+				float diff = 1.f - NormalDotLeft;
+
+				NormalDotLeft -= diff / (i + 1.f);
+			}
+
+			SteerHitLeft = i;
+			SteerClampLeft = steerAvoidanceThreshold * NormalDotLeft;
+		}
+	}
+
+	if (SteerHitRight > -1.f && SteerHitRight > SteerHitLeft) {
+		SteeringValue = FMath::Min(SteerClampRight, SteeringValue);
+	}
+	else if (SteerHitLeft > -1.f) {
+		SteeringValue = FMath::Max(SteerClampLeft, SteeringValue);
+	}
+
+	if (HitDirectLeft) {
+		SteeringValue = FMath::Max(0.2f, SteeringValue);
+	}
+
+	if (HitDirectRight) {
+		SteeringValue = FMath::Min(-0.2f, SteeringValue);
 	}
 
 	// Trace directly ahead for collisions
 	traceEndPosition = aiPosition;
-	traceEndPosition += pAIActor->GetActorForwardVector() * 1000.f;
+	traceEndPosition += pAIActor->GetActorForwardVector() * (AISpeed + 50.f);
 	traceEndPosition += pAIActor->GetActorUpVector() * 10.f;
 
 	world->LineTraceSingleByChannel(
@@ -149,6 +267,15 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		RV_TraceParams
 	);
 
+	DrawDebugPoint(
+		world,
+		traceEndPosition,
+		20,
+		FColor(255, 0, 255),
+		false,
+		0.03
+	);
+
 	AActor* pActorHitFront = RV_Hit.GetActor();
 	bool HitForward = false;
 
@@ -156,10 +283,20 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		HitForward = true;
 	}
 
-	bool ShouldReverse = forwardDot < -0.3f || HitForward || (HitRight && HitLeft && NormalDotRight < -0.9f && NormalDotLeft < -0.9f);
+	bool ShouldReverse = forwardDot < -0.3f || HitForward || SteerHitRight == NumSidewaysChecks -1 || SteerHitLeft == NumSidewaysChecks - 1;// || (HitRight && HitLeft && NormalDotRight < -0.9f && NormalDotLeft < -0.9f);
+	bool ShouldReverseTime = world->GetTimeSeconds() - reverseStart < 1.f;
 
-	if (ShouldReverse){
-		SteeringValue = -1.f;
+	if (ShouldReverse || ShouldReverseTime){
+		if (SteerHitRight > SteerHitLeft) {
+			SteeringValue = -1.f;
+		}
+		else {
+			SteeringValue = 1.f;
+		}
+
+		if (ShouldReverse && !ShouldReverseTime) {
+			reverseStart = world->GetTimeSeconds();
+		}		
 	}
 	
 	//////////////
@@ -180,7 +317,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 
 
 
-	if (ShouldReverse) {
+	if (ShouldReverse || ShouldReverseTime) {
 		ThrottleValue = -1.f;
 	}
 
