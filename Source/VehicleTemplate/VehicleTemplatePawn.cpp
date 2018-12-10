@@ -78,7 +78,7 @@ AVehicleTemplatePawn::AVehicleTemplatePawn()
 	SpringArm->SetupAttachment(RootComponent);
 	SpringArm->TargetArmLength = 400.0f;
 	SpringArm->bEnableCameraRotationLag = true;
-	SpringArm->CameraRotationLagSpeed = 25.f;
+	SpringArm->CameraRotationLagSpeed = 250.f;
 	SpringArm->bInheritPitch = false;
 	SpringArm->bInheritRoll = false;
 
@@ -90,7 +90,7 @@ AVehicleTemplatePawn::AVehicleTemplatePawn()
 
 	// Create In-Car camera component 
 	InternalCameraOrigin = FVector(0.0f, -40.0f, 120.0f);
-	CameraDistance = 1000.f;
+	CameraDistance = 6000.f;
 	CameraPitch = 0.f;
 	CameraYaw = 0.f;
 
@@ -244,14 +244,29 @@ void AVehicleTemplatePawn::Tick(float Delta)
 	}
 
 	// Camera rotation
-	FRotator rot = FRotator(CameraPitch, CameraYaw, 0.f);
+	FRotator rot = FRotator(-15.f, CameraYaw, 0.f);
 	FVector rotForward = FRotationMatrix(rot).GetScaledAxis(EAxis::X);
-	FVector camPos = rotForward * -CameraDistance;
+	
+	if (false) {
+		FVector camPos = rotForward * -6000;
 
-	SpringArm->SetRelativeLocation(camPos);
+		FVector Pos = GetActorLocation();
+		// SpringArm->SetRelativeLocation(camPos);
+		SpringArm->SetWorldLocation(Pos + camPos + FVector(0, 0, 250.f));
 
-	FRotator cameraRotation = UKismetMathLibrary::FindLookAtRotation(FVector(0.f,0.f,0.f), -camPos);
-	SpringArm->SetRelativeRotation(cameraRotation);
+		FRotator cameraRotation = UKismetMathLibrary::FindLookAtRotation(FVector(0.f, 0.f, 0.f), -camPos);
+		SpringArm->SetRelativeRotation(cameraRotation);
+	}
+	else {
+		FVector camPos = rotForward * -1000;
+
+		FVector Pos = GetActorLocation();
+		// SpringArm->SetRelativeLocation(camPos);
+		SpringArm->SetWorldLocation(Pos + camPos + FVector(0, 0, 250.f));
+
+		FRotator cameraRotation = UKismetMathLibrary::FindLookAtRotation(FVector(0.f, 0.f, 0.f), -camPos);
+		SpringArm->SetRelativeRotation(cameraRotation);
+	}
 }
 
 void AVehicleTemplatePawn::BeginPlay()
