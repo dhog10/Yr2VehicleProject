@@ -17,6 +17,7 @@ class VEHICLETEMPLATE_API UBTSteeringService : public UBTService
 private:
 	class APawn* PlayerPawn;
 	float reverseStart = 0.f;
+	int hitForwardCount = 0;
 public:
 
 	virtual void OnGameplayTaskActivated(UGameplayTask& task) override;

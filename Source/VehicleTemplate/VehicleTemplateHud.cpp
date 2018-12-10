@@ -11,6 +11,10 @@
 #include "CanvasItem.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/Engine.h"
+#include "Runtime/Engine/Classes/Engine/World.h"
+#include "Runtime/Engine/Classes/GameFramework/GameStateBase.h"
+#include "Runtime/Engine/Classes/GameFramework/PlayerState.h"
+#include "VehiclePlayerState.h"
 
 #define LOCTEXT_NAMESPACE "VehicleHUD"
 
@@ -23,6 +27,11 @@ AVehicleTemplateHud::AVehicleTemplateHud()
 void AVehicleTemplateHud::DrawHUD()
 {
 	Super::DrawHUD();
+
+	UWorld* pWorld = GetWorld();
+
+	TArray<APlayerState*> players = pWorld->GetGameState()->PlayerArray;
+	AVehiclePlayerState* pPlayer = (AVehiclePlayerState*)players[0];
 
 	// Calculate ratio from 720p
 	const float HUDXRatio = Canvas->SizeX / 1280.f;
@@ -50,6 +59,20 @@ void AVehicleTemplateHud::DrawHUD()
 			FCanvasTextItem GearTextItem(FVector2D(HUDXRatio * 805.f, HUDYRatio * 500.f), Vehicle->GearDisplayString, HUDFont, Vehicle->bInReverseGear == false ? Vehicle->GearDisplayColor : Vehicle->GearDisplayReverseColor);
 			GearTextItem.Scale = ScaleVec;
 			Canvas->DrawItem(GearTextItem);
+
+			FString HealthText = (TEXT("Health: ") + FString::SanitizeFloat(pPlayer->Health));
+			
+			// Health
+			FCanvasTextItem HealthTextItem(FVector2D(HUDXRatio * 100.f, HUDYRatio * 600.f), FText::FromString(HealthText), HUDFont, Vehicle->GearDisplayColor);
+			HealthTextItem.Scale = ScaleVec;
+			Canvas->DrawItem(HealthTextItem);
+
+			FString ScoreText = TEXT("Score: ") + FString::SanitizeFloat((float)pPlayer->Score);
+
+			// Health
+			FCanvasTextItem ScoreTextItem(FVector2D(HUDXRatio * 100.f, HUDYRatio * 650.f), FText::FromString(ScoreText), HUDFont, Vehicle->GearDisplayColor);
+			ScoreTextItem.Scale = ScaleVec;
+			Canvas->DrawItem(ScoreTextItem);
 		}
 	}
 }

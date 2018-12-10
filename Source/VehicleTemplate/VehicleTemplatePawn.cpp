@@ -16,6 +16,12 @@
 #include "Materials/Material.h"
 #include "GameFramework/Controller.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
+#include "Runtime/Engine/Classes/Components/BoxComponent.h"
+#include "AIWheeledVehicle.h"
+#include "VehiclePlayerState.h"
+#include "Runtime/Engine/Classes/Engine/World.h"
+#include "Runtime/Engine/Classes/GameFramework/GameStateBase.h"
+
 // Debug
 #include <Runtime/Engine/Public/DrawDebugHelpers.h>
 #include <Runtime/Engine/Classes/Engine/Engine.h>
@@ -36,10 +42,14 @@ AVehicleTemplatePawn::AVehicleTemplatePawn()
 	// Car mesh
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> CarMesh(TEXT("/Game/Vehicle/Sedan/Sedan_SkelMesh.Sedan_SkelMesh"));
 	GetMesh()->SetSkeletalMesh(CarMesh.Object);
+	GetMesh()->OnComponentHit.AddDynamic(this, &AVehicleTemplatePawn::OnHit);
 
 	static ConstructorHelpers::FClassFinder<UObject> AnimBPClass(TEXT("/Game/Vehicle/Sedan/Sedan_AnimBP"));
 	GetMesh()->SetAnimInstanceClass(AnimBPClass.Class);
-	
+
+	OnActorBeginOverlap.AddDynamic(this, &AVehicleTemplatePawn::OnOverlapBegin);
+
+
 	// Simulation
 	UWheeledVehicleMovementComponent4W* Vehicle4W = CastChecked<UWheeledVehicleMovementComponent4W>(GetVehicleMovement());
 
@@ -255,6 +265,11 @@ void AVehicleTemplatePawn::BeginPlay()
 	EnableIncarView(bEnableInCar,true);
 }
 
+void AVehicleTemplatePawn::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	int a = 0;
+}
+
 void AVehicleTemplatePawn::OnResetVR()
 {
 #if HMD_MODULE_INCLUDED
@@ -305,5 +320,32 @@ void AVehicleTemplatePawn::SetupInCarHUD()
 		}
 	}
 }
+
+void AVehicleTemplatePawn::OnOverlapBegin(AActor* MyOverlappedActor, AActor* OtherActor)
+{
+	if (MyOverlappedActor == OtherActor) { return; }
+
+	FVector rPos = MyOverlappedActor->GetActorLocation() - OtherActor->GetActorLocation();
+	rPos.Normalize();
+
+	FVector MyVel = MyOverlappedActor->GetVelocity();
+	FVector OtherVel = OtherActor->GetVelocity();
+	FVector rVel = OtherVel - MyVel;
+	float vel = rVel.Size();
+
+	MyVel.Normalize();
+
+	float CollisionStrength = FMath::Abs(FVector::DotProduct(-MyVel, rPos)) * vel;
+
+	if (OtherActor->GetClass() == AAIWheeledVehicle::StaticClass()) {
+		UWorld* pWorld = GetWorld();
+		AGameStateBase* pState = pWorld->GetGameState();
+
+		AVehiclePlayerState* pPlayer = (AVehiclePlayerState*)pState->PlayerArray[0];
+
+		pPlayer->Health = FMath::Max(0.f, pPlayer->Health - (vel * 0.006f));
+	}
+}
+
 
 #undef LOCTEXT_NAMESPACE

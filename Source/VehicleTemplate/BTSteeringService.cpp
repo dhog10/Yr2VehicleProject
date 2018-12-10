@@ -89,59 +89,69 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	
 	// Trace Direct Right
 	bool HitDirectRight = false;
+	AActor* pActorHitDirectRight = NULL;
 
-	traceEndPosition = aiPosition;
-	traceEndPosition += pAIActor->GetActorRightVector() * traceDirectRightDistance;
+	for (int i = 0; i <= 1; i++) {
+		traceEndPosition = aiPosition;
+		traceEndPosition += pAIActor->GetActorRightVector() * traceDirectRightDistance;
+		traceEndPosition += pAIActor->GetActorForwardVector() * 150.f * (float)i;
 
-	world->LineTraceSingleByChannel(
-		RV_Hit,        //result
-		aiPosition,    //start
-		traceEndPosition, //end
-		ECC_Pawn, //collision channel
-		RV_TraceParams
-	);
+		world->LineTraceSingleByChannel(
+			RV_Hit,        //result
+			aiPosition,    //start
+			traceEndPosition, //end
+			ECC_Pawn, //collision channel
+			RV_TraceParams
+		);
 
-	DrawDebugPoint(
-		world,
-		traceEndPosition,
-		20,
-		FColor(255, 0, 255),
-		false,
-		0.03
-	);
+		DrawDebugPoint(
+			world,
+			traceEndPosition,
+			20,
+			FColor(255, 0, 255),
+			false,
+			0.03
+		);
 
-	AActor* pActorHitDirectRight = RV_Hit.GetActor();
-	if (pActorHitDirectRight && pActorHitDirectRight != PlayerPawn) {
-		HitDirectRight = true;
+		pActorHitDirectRight = RV_Hit.GetActor();
+		if (pActorHitDirectRight && pActorHitDirectRight != PlayerPawn) {
+			HitDirectRight = true;
+			break;
+		}
 	}
 
 	// Trace Direct Left
 	bool HitDirectLeft = false;
+	AActor* pActorHitDirectLeft = NULL;
 
-	traceEndPosition = aiPosition;
-	traceEndPosition -= pAIActor->GetActorRightVector() * traceDirectRightDistance;
+	for (int i = 0; i <= 1; i++) {
+		traceEndPosition = aiPosition;
+		traceEndPosition -= pAIActor->GetActorRightVector() * traceDirectRightDistance;
+		traceEndPosition += pAIActor->GetActorForwardVector() * 50.f * (float)i;
 
-	world->LineTraceSingleByChannel(
-		RV_Hit,        //result
-		aiPosition,    //start
-		traceEndPosition, //end
-		ECC_Pawn, //collision channel
-		RV_TraceParams
-	);
+		world->LineTraceSingleByChannel(
+			RV_Hit,        //result
+			aiPosition,    //start
+			traceEndPosition, //end
+			ECC_Pawn, //collision channel
+			RV_TraceParams
+		);
 
-	DrawDebugPoint(
-		world,
-		traceEndPosition,
-		20,
-		FColor(255, 0, 255),
-		false,
-		0.03
-	);
+		DrawDebugPoint(
+			world,
+			traceEndPosition,
+			20,
+			FColor(255, 0, 255),
+			false,
+			0.03
+		);
 
-	AActor* pActorHitDirectLeft = RV_Hit.GetActor();
-	if (pActorHitDirectLeft && pActorHitDirectLeft != PlayerPawn) {
-		HitDirectLeft = true;
-	}
+		pActorHitDirectLeft = RV_Hit.GetActor();
+		if (pActorHitDirectLeft && pActorHitDirectLeft != PlayerPawn) {
+			HitDirectLeft = true;
+			break;
+		}
+	}	
 
 	float SteerHitRight = -1.f;
 	float SteerClampRight = 0.f;
@@ -254,24 +264,41 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		SteeringValue = FMath::Min(-0.2f, SteeringValue);
 	}
 
+
 	// Trace directly ahead for collisions
-	traceEndPosition = aiPosition;
-	traceEndPosition += pAIActor->GetActorForwardVector() * FMath::Min(AISpeed + 50.f, 350.f);
-	traceEndPosition += pAIActor->GetActorUpVector() * 10.f;
+	float forwardRightOffset = 50.f;
 
-	world->LineTraceSingleByChannel(
-		RV_Hit,        //result
-		aiPosition,    //start
-		traceEndPosition, //end
-		ECC_Pawn, //collision channel
-		RV_TraceParams
-	);
-
-	AActor* pActorHitFront = RV_Hit.GetActor();
+	AActor* pActorHitFront = NULL;
 	bool HitForward = false;
 
-	if (pActorHitFront && pActorHitFront != PlayerPawn) {
-		HitForward = true;
+	for (int i = -1; i <= 1; i++) {
+		traceEndPosition = aiPosition;
+		traceEndPosition += pAIActor->GetActorForwardVector() * FMath::Min(AISpeed + 50.f, 350.f);
+		traceEndPosition += pAIActor->GetActorUpVector() * 10.f;
+		traceEndPosition += pAIActor->GetActorRightVector() * forwardRightOffset * (float)i;
+
+		world->LineTraceSingleByChannel(
+			RV_Hit,        //result
+			aiPosition,    //start
+			traceEndPosition, //end
+			ECC_Pawn, //collision channel
+			RV_TraceParams
+		);
+
+		DrawDebugPoint(
+			world,
+			traceEndPosition,
+			20,
+			FColor(255, 0, 0),
+			false,
+			0.03
+		);
+
+		AActor* pActorHitFront = RV_Hit.GetActor();
+		if (pActorHitFront && pActorHitFront != PlayerPawn) {
+			HitForward = true;
+			break;
+		}
 	}
 
 	// Trace directly ahead for speed
@@ -291,10 +318,17 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	bool HitForwardSpeed = false;
 
 	if (pActorHitFront && pActorHitFront != PlayerPawn) {
+		hitForwardCount++;
+	}
+	else {
+		hitForwardCount--;
+	}
+
+	if (hitForwardCount >= 15) {
 		HitForward = true;
 	}
 
-	bool ShouldReverse = forwardDot < -0.3f || HitForward || SteerHitRight == NumSidewaysChecks -1 || SteerHitLeft == NumSidewaysChecks - 1;// || (HitRight && HitLeft && NormalDotRight < -0.9f && NormalDotLeft < -0.9f);
+	bool ShouldReverse = forwardDot < -0.3f || HitForward || (AISpeed < 20.f && (SteerHitRight == NumSidewaysChecks -1 || SteerHitLeft == NumSidewaysChecks - 1));// || (HitRight && HitLeft && NormalDotRight < -0.9f && NormalDotLeft < -0.9f);
 	bool ShouldReverseTime = world->GetTimeSeconds() - reverseStart < 1.f;
 
 	if (ShouldReverse || ShouldReverseTime){

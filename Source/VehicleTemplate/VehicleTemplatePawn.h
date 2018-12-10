@@ -84,6 +84,11 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	UFUNCTION()
+	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	UFUNCTION()
+		void OnOverlapBegin(AActor* MyOverlappedActor, AActor* OtherActor);
+
 	// End Actor interface
 
 	/** Handle pressing forwards */
