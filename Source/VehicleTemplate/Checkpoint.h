@@ -23,6 +23,28 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	
-	
+	void ActivateCheckpoint();
+	void DeactivateCheckpoint();
+	void SetMaterialColor(FLinearColor color);
+	void SetMaterialAlpha(float alpha);
+
+	UPROPERTY(EditAnywhere)
+	UStaticMeshComponent* MeshComponent;
+
+	UPROPERTY(EditAnywhere)
+		FLinearColor ActiveColor;
+
+	UPROPERTY(EditAnywhere)
+		FLinearColor InactiveColor;
+
+	UFUNCTION()
+		void OnOverlapBegin(AActor* MyOverlappedActor, AActor* OtherActor);
+
+	class AGameStateManager* pManager;
+	bool bCheckpointActive;
+	bool bDeactivating;
+
+private:
+	float DeactivatingAlpha;
+	class UMaterialInstanceDynamic* MILight;
 };

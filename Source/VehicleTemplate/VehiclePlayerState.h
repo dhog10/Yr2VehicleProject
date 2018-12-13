@@ -19,4 +19,5 @@ public:
 
 		float Health;
 		int Score;
+		int Ammo;
 };

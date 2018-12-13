@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "WheeledVehicle.h"
+#include "Projectile.h"
 #include "VehicleTemplatePawn.generated.h"
+
 
 class UCameraComponent;
 class USpringArmComponent;
@@ -88,6 +90,10 @@ public:
 	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	UFUNCTION()
 		void OnOverlapBegin(AActor* MyOverlappedActor, AActor* OtherActor);
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<AProjectile> ProjectileClass;
+
+	void Shoot();
 
 	// End Actor interface
 

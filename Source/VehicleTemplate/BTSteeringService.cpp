@@ -76,7 +76,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	float traceDirectRightDistance = 250.f;
 	float steerAvoidanceThreshold = 0.7f;
 	float ForwardTraceOffset = 240.f;
-
+	float upTraceOffset = 70.f;
 	int NumSidewaysChecks = 5;
 	
 	FVector traceEndPosition = aiPosition;
@@ -94,6 +94,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	for (int i = 0; i <= 1; i++) {
 		traceEndPosition = aiPosition;
 		traceEndPosition += pAIActor->GetActorRightVector() * traceDirectRightDistance;
+		traceEndPosition += pAIActor->GetActorUpVector() * upTraceOffset;
 		traceEndPosition += pAIActor->GetActorForwardVector() * 150.f * (float)i;
 
 		world->LineTraceSingleByChannel(
@@ -127,6 +128,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	for (int i = 0; i <= 1; i++) {
 		traceEndPosition = aiPosition;
 		traceEndPosition -= pAIActor->GetActorRightVector() * traceDirectRightDistance;
+		traceEndPosition += pAIActor->GetActorUpVector() * upTraceOffset;
 		traceEndPosition += pAIActor->GetActorForwardVector() * 50.f * (float)i;
 
 		world->LineTraceSingleByChannel(
@@ -161,6 +163,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	for (float i = 0; i < NumSidewaysChecks; i++) {
 		traceEndPosition = aiPosition + pAIActor->GetActorForwardVector() * ForwardTraceOffset;
 		traceEndPosition += pAIActor->GetActorForwardVector() * traceForwardDistance * (1.f / (i + 1.f));
+		traceEndPosition += pAIActor->GetActorUpVector() * upTraceOffset;
 		traceEndPosition += pAIActor->GetActorRightVector() * traceRightDistance * (1.5f / (i + 1.f));
 
 		world->LineTraceSingleByChannel(
@@ -210,6 +213,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	for (float i = 0; i < NumSidewaysChecks; i++) {
 		traceEndPosition = aiPosition + pAIActor->GetActorForwardVector() * ForwardTraceOffset;
 		traceEndPosition += pAIActor->GetActorForwardVector() * traceForwardDistance * (1.f / (i + 1.f));
+		traceEndPosition += pAIActor->GetActorUpVector() * upTraceOffset;
 		traceEndPosition -= pAIActor->GetActorRightVector() * traceRightDistance * (1.5f / (i + 1.f));
 
 		world->LineTraceSingleByChannel(
@@ -274,7 +278,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	for (int i = -1; i <= 1; i++) {
 		traceEndPosition = aiPosition;
 		traceEndPosition += pAIActor->GetActorForwardVector() * FMath::Min(AISpeed + 50.f, 350.f);
-		traceEndPosition += pAIActor->GetActorUpVector() * 10.f;
+		traceEndPosition += pAIActor->GetActorUpVector() * upTraceOffset;
 		traceEndPosition += pAIActor->GetActorRightVector() * forwardRightOffset * (float)i;
 
 		world->LineTraceSingleByChannel(

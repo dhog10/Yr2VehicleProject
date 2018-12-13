@@ -11,6 +11,7 @@ AVehiclePlayerState::AVehiclePlayerState(const FObjectInitializer& init)
 {
 	Health = 100.f;
 	Score = 0;
+	Ammo = 60;
 }
 
 

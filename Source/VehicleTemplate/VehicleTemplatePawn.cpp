@@ -21,6 +21,7 @@
 #include "VehiclePlayerState.h"
 #include "Runtime/Engine/Classes/Engine/World.h"
 #include "Runtime/Engine/Classes/GameFramework/GameStateBase.h"
+#include "Runtime/Engine/Classes/Components/SphereComponent.h"
 
 // Debug
 #include <Runtime/Engine/Public/DrawDebugHelpers.h>
@@ -150,6 +151,7 @@ void AVehicleTemplatePawn::SetupPlayerInputComponent(class UInputComponent* Play
 	PlayerInputComponent->BindAction("Handbrake", IE_Pressed, this, &AVehicleTemplatePawn::OnHandbrakePressed);
 	PlayerInputComponent->BindAction("Handbrake", IE_Released, this, &AVehicleTemplatePawn::OnHandbrakeReleased);
 	PlayerInputComponent->BindAction("SwitchCamera", IE_Pressed, this, &AVehicleTemplatePawn::OnToggleCamera);
+	PlayerInputComponent->BindAction("Shoot", IE_Pressed, this, &AVehicleTemplatePawn::Shoot);
 
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AVehicleTemplatePawn::OnResetVR); 
 }
@@ -265,7 +267,7 @@ void AVehicleTemplatePawn::Tick(float Delta)
 		SpringArm->SetWorldLocation(Pos + camPos + FVector(0, 0, 250.f));
 
 		FRotator cameraRotation = UKismetMathLibrary::FindLookAtRotation(FVector(0.f, 0.f, 0.f), -camPos);
-		SpringArm->SetRelativeRotation(cameraRotation);
+		SpringArm->SetWorldRotation(cameraRotation);
 	}
 }
 
@@ -359,6 +361,34 @@ void AVehicleTemplatePawn::OnOverlapBegin(AActor* MyOverlappedActor, AActor* Oth
 		AVehiclePlayerState* pPlayer = (AVehiclePlayerState*)pState->PlayerArray[0];
 
 		pPlayer->Health = FMath::Max(0.f, pPlayer->Health - (vel * 0.006f));
+	}
+}
+
+void AVehicleTemplatePawn::Shoot()
+{
+	if (!ProjectileClass) { return; }
+
+	UWorld* pWorld = GetWorld();
+
+	AVehiclePlayerState* pState = (AVehiclePlayerState*)pWorld->GetGameState()->PlayerArray[0];
+
+	if (pState->Ammo > 0) {
+		pState->Ammo--;
+
+		FActorSpawnParameters params;
+		params.Owner = this;
+
+		FRotator rotation = FRotator(0,0,0);
+		FVector location = GetActorLocation() + (GetActorForwardVector() * 250.f) + (GetActorUpVector() * 80.f);
+
+		AProjectile* pProjectile = pWorld->SpawnActor<AProjectile>(ProjectileClass, location, rotation, params);
+		
+		if (pProjectile) {
+			USphereComponent* pSphere = Cast<USphereComponent>(pProjectile->GetRootComponent());
+			if (pSphere) {
+				pSphere->AddImpulse(GetActorForwardVector() * pSphere->GetBodyInstance()->GetBodyMass() * 5000.f);
+			}
+		}
 	}
 }
 

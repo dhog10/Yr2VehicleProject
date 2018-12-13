@@ -70,9 +70,16 @@ void AVehicleTemplateHud::DrawHUD()
 			FString ScoreText = TEXT("Score: ") + FString::SanitizeFloat((float)pPlayer->Score);
 
 			// Health
-			FCanvasTextItem ScoreTextItem(FVector2D(HUDXRatio * 100.f, HUDYRatio * 650.f), FText::FromString(ScoreText), HUDFont, Vehicle->GearDisplayColor);
+			FCanvasTextItem ScoreTextItem(FVector2D(HUDXRatio * 100.f, HUDYRatio * 640.f), FText::FromString(ScoreText), HUDFont, Vehicle->GearDisplayColor);
 			ScoreTextItem.Scale = ScaleVec;
 			Canvas->DrawItem(ScoreTextItem);
+
+			FString AmmoText = TEXT("Ammo: ") + FString::SanitizeFloat((float)pPlayer->Ammo);
+
+			// Ammo
+			FCanvasTextItem AmmoTextItem(FVector2D(HUDXRatio * 100.f, HUDYRatio * 680.f), FText::FromString(AmmoText), HUDFont, Vehicle->GearDisplayColor);
+			AmmoTextItem.Scale = ScaleVec;
+			Canvas->DrawItem(AmmoTextItem);
 		}
 	}
 }
