@@ -6,6 +6,8 @@
 #include "WheeledVehicleMovementComponent4W.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/SkeletalMesh.h"
+#include "AIWheeledVehicleController.h"
+#include "Runtime/AIModule/Classes/BehaviorTree/BehaviorTree.h"
 #include "Engine/Engine.h"
 
 
@@ -17,6 +19,11 @@ AAIWheeledVehicle::AAIWheeledVehicle()
 
 	static ConstructorHelpers::FClassFinder<UObject> AnimBPClass(TEXT("/Game/Vehicle/Sedan/Sedan_AnimBP"));
 	GetMesh()->SetAnimInstanceClass(AnimBPClass.Class);
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> SphereMaterialAsset(TEXT("/Game/Vehicle/Sedan/Materials/M_Vehicle_Sedan_Inst_TailLights"));
+	if (SphereMaterialAsset.Succeeded()) {
+		GetMesh()->SetMaterial(2, SphereMaterialAsset.Object);
+	}
 
 	// Simulation
 	UWheeledVehicleMovementComponent4W* Vehicle4W = CastChecked<UWheeledVehicleMovementComponent4W>(GetVehicleMovement());
@@ -38,12 +45,36 @@ AAIWheeledVehicle::AAIWheeledVehicle()
 	Vehicle4W->WheelSetups[3].WheelClass = UVehicleTemplateWheelRear::StaticClass();
 	Vehicle4W->WheelSetups[3].BoneName = FName("Wheel_Rear_Right");
 	Vehicle4W->WheelSetups[3].AdditionalOffset = FVector(0.f, 12.f, 0.f);
+
+	this->AIControllerClass = AAIWheeledVehicleController::StaticClass();
+
+	FString Path = "BehaviorTree'/Game/BTAIVehicleChase.BTAIVehicleChase'";
+	UBehaviorTree* BT = Cast<UBehaviorTree>(StaticLoadObject(UBehaviorTree::StaticClass(), nullptr, *Path));
+
+	this->BehaviorTree = BT;
+	this->AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+	StuckTime = 0;
+	StuckPosition = FVector(0, 0, 0);
 }
 
 void AAIWheeledVehicle::Tick(float Delta)
 {
 	Super::Tick(Delta);
 
+	// Destroy actor if stuck
+	float Distance = FVector::Distance(StuckPosition, GetActorLocation());
+
+	if (Distance > 50.f) {
+		StuckPosition = GetActorLocation();
+		StuckTime = 0.f;
+	}
+	else {
+		StuckTime += Delta;
+		if (StuckTime > 2.f) {
+			Destroy();
+		}
+	}
 }
 
 void AAIWheeledVehicle::BeginPlay()

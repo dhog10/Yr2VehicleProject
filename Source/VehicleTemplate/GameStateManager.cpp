@@ -5,6 +5,8 @@
 #include "Runtime/Engine/Classes/Engine/World.h"
 #include "Runtime/Engine/Classes/GameFramework/GameStateBase.h"
 #include "VehiclePlayerState.h"
+#include "Runtime/Engine/Classes/Engine/World.h"
+#include "AIWheeledVehicle.h"
 
 // Sets default values
 AGameStateManager::AGameStateManager()
@@ -14,6 +16,8 @@ AGameStateManager::AGameStateManager()
 
 	checkpoints = TArray<AActor*>();
 	ActiveCheckpointIndex = 0;
+	LastVehicleSpawnIndex = 0;
+	targetNumVehicles = 3;
 }
 
 // Called when the game starts or when spawned
@@ -63,5 +67,45 @@ void AGameStateManager::Tick(float DeltaTime)
 			}
 		}
 	}
+
+	// Remove destroyed / pending destruction actors from list
+	for (int i = 0; i < vehicles.Num(); i++) {
+		AActor* pActor = vehicles[i];
+
+		if (!pActor || !pActor->IsValidLowLevel() || pActor->IsPendingKill()) {
+			vehicles.RemoveAt(i);
+		}
+	}
+
+	int len = vehicles.Num();
+	int spawnLen = vehicleSpawnpoints.Num();
+
+	if (len < targetNumVehicles && spawnLen > 0) {
+		if (LastVehicleSpawnIndex >= spawnLen) {
+			LastVehicleSpawnIndex = 0;
+		}
+
+		AActor* pSpawn = vehicleSpawnpoints[LastVehicleSpawnIndex++];
+
+		if (pSpawn) {
+			AAIWheeledVehicle* pVehicle = CreateVehicle(pSpawn->GetActorLocation() + FVector(0, 500.0, 0), pSpawn->GetActorRotation());
+
+			if (pVehicle) {
+				vehicles.Add(pVehicle);
+			}
+		}
+	}
+}
+
+AAIWheeledVehicle* AGameStateManager::CreateVehicle(FVector location, FRotator rotation) {
+	UWorld* pWorld = GetWorld();
+
+	FActorSpawnParameters params;
+	params.Owner = this;
+	params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AAIWheeledVehicle* SpawnedActor = pWorld->SpawnActor<AAIWheeledVehicle>(AAIWheeledVehicle::StaticClass(), location, rotation, params);
+
+	return SpawnedActor;
 }
 

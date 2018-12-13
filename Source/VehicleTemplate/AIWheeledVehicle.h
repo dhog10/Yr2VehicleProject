@@ -28,5 +28,6 @@ protected:
 
 	/* Are we on a 'slippery' surface */
 	bool bIsLowFriction;
-	
+	float StuckTime;
+	FVector StuckPosition;
 };

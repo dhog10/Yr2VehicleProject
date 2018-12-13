@@ -6,6 +6,7 @@
 #include "GameStateManager.h"
 #include "Runtime/Engine/Classes/Materials/MaterialInstanceDynamic.h"
 #include "Runtime/Core/Public/Math/Color.h"
+#include "VehicleTemplatePawn.h"
 
 // Sets default values
 ACheckpoint::ACheckpoint()
@@ -88,6 +89,10 @@ void ACheckpoint::SetMaterialAlpha(float alpha)
 
 void ACheckpoint::OnOverlapBegin(AActor * MyOverlappedActor, AActor * OtherActor)
 {
+	if (OtherActor->GetClass() != AVehicleTemplatePawn::StaticClass()) {
+		return;
+	}
+
 	if (bCheckpointActive && pManager) {
 		pManager->PickNewCheckpoint();
 		pManager->AddPlayerScore(1);

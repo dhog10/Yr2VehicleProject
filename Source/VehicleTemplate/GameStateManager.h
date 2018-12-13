@@ -28,7 +28,17 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		TArray<AActor*> checkpoints;
-	
+	UPROPERTY(EditAnywhere)
+		TArray<AActor*> vehicleSpawnpoints;
+	UPROPERTY(EditAnywhere)
+		TArray<AActor*> vehicles;
+	UPROPERTY(EditAnywhere)
+		int targetNumVehicles;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class AAIWheeledVehicle> vehicleClass;
+
+	class AAIWheeledVehicle* CreateVehicle(FVector location, FRotator rotation);
 private:
 	int ActiveCheckpointIndex;
+	int LastVehicleSpawnIndex;
 };

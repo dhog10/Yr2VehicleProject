@@ -10,6 +10,8 @@
 #include <Runtime/AIModule/Classes/AIController.h>
 #include <Runtime/Engine/Public/CollisionQueryParams.h>
 #include <Runtime/Engine/Classes/Engine/EngineTypes.h>
+#include "AIWheeledVehicleController.h"
+
 // Debug
 #include <Runtime/Engine/Public/DrawDebugHelpers.h>
 #include <Runtime/Engine/Classes/Engine/Engine.h>
@@ -42,7 +44,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	//Not particularly robust, but at least here we are dealing with only one player
 	PlayerPawn = *PlayerPawnIter;
 
-	AAIController* pAIController = OwnerComp.GetAIOwner();
+	AAIWheeledVehicleController* pAIController = (AAIWheeledVehicleController*)OwnerComp.GetAIOwner();
 
 	AActor* pAIActor = pAIController->GetPawn();
 
@@ -322,18 +324,18 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	bool HitForwardSpeed = false;
 
 	if (pActorHitFront && pActorHitFront != PlayerPawn) {
-		hitForwardCount++;
+		pAIController->hitForwardCount++;
 	}
 	else {
-		hitForwardCount--;
+		pAIController->hitForwardCount--;
 	}
 
-	if (hitForwardCount >= 15) {
+	if (pAIController->hitForwardCount >= 15) {
 		HitForward = true;
 	}
 
 	bool ShouldReverse = forwardDot < -0.3f || HitForward || (AISpeed < 20.f && (SteerHitRight == NumSidewaysChecks -1 || SteerHitLeft == NumSidewaysChecks - 1));// || (HitRight && HitLeft && NormalDotRight < -0.9f && NormalDotLeft < -0.9f);
-	bool ShouldReverseTime = world->GetTimeSeconds() - reverseStart < 1.f;
+	bool ShouldReverseTime = world->GetTimeSeconds() - pAIController->reverseStart < 1.f;
 
 	if (ShouldReverse || ShouldReverseTime){
 		if (SteerHitRight > SteerHitLeft) {
@@ -344,7 +346,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		}
 
 		if (ShouldReverse && !ShouldReverseTime) {
-			reverseStart = world->GetTimeSeconds();
+			pAIController->reverseStart = world->GetTimeSeconds();
 		}		
 	}
 	

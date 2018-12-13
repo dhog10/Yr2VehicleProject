@@ -18,6 +18,9 @@ public:
 	class UWheeledVehicleMovementComponent* pVehicleMovementComponent;
 	AAIWheeledVehicleController();
 	
+	float reverseStart = 0.f;
+	int hitForwardCount = 0;
+
 	virtual void Possess(APawn* pPawn) override;
 	virtual void Tick(float DeltaTime) override;
 
