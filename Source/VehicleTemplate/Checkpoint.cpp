@@ -1,5 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+// A checkpoint is an actor which the player must drive to increase their score
+
 #include "Checkpoint.h"
 #include "Runtime/Engine/Classes/Components/StaticMeshComponent.h"
 #include "Runtime/Engine/Classes/Engine/StaticMesh.h"
@@ -42,6 +44,7 @@ void ACheckpoint::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
+	// This allows the checkpoint to temporarily still be visible as a different color after being reached
 	if (bDeactivating) {
 		DeactivatingAlpha -= DeltaTime;
 		if (DeactivatingAlpha < 0.f) {
@@ -52,6 +55,7 @@ void ACheckpoint::Tick(float DeltaTime)
 		SetMaterialAlpha(DeactivatingAlpha);
 	}
 
+	// Hide the actor if it is inactive
 	if (!bCheckpointActive && !bDeactivating) {
 		SetActorHiddenInGame(true);
 	}
@@ -87,6 +91,7 @@ void ACheckpoint::SetMaterialAlpha(float alpha)
 	}
 }
 
+// Deactivates the checkpoint, adds score, and requests a new checkpoint to be activated when the player drives into the overlap collider
 void ACheckpoint::OnOverlapBegin(AActor * MyOverlappedActor, AActor * OtherActor)
 {
 	if (OtherActor->GetClass() != AVehicleTemplatePawn::StaticClass()) {

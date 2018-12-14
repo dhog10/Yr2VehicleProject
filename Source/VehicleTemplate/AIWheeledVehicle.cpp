@@ -65,7 +65,7 @@ void AAIWheeledVehicle::Tick(float Delta)
 	// Destroy actor if stuck
 	float Distance = FVector::Distance(StuckPosition, GetActorLocation());
 
-	if (Distance > 50.f) {
+	if (Distance > 150.f) {
 		StuckPosition = GetActorLocation();
 		StuckTime = 0.f;
 	}

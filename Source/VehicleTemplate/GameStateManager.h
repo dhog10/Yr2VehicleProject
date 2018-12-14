@@ -18,7 +18,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
+	float lastSpawnedPickup;
 public:	
 	void PickNewCheckpoint();
 	void AddPlayerScore(int score);
@@ -33,11 +33,20 @@ public:
 	UPROPERTY(EditAnywhere)
 		TArray<AActor*> vehicles;
 	UPROPERTY(EditAnywhere)
+		TArray<AActor*> pickupSpawns;
+	UPROPERTY(EditAnywhere)
+		int targetNumPickups;
+	UPROPERTY(EditAnywhere)
+		float pickupSpawnDelay;
+	UPROPERTY(EditAnywhere)
 		int targetNumVehicles;
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<class AAIWheeledVehicle> vehicleClass;
 
+	TArray<AActor*> pickups;
+
 	class AAIWheeledVehicle* CreateVehicle(FVector location, FRotator rotation);
+	class APickup* CreatePickup(FVector location, FRotator rotation);
 private:
 	int ActiveCheckpointIndex;
 	int LastVehicleSpawnIndex;

@@ -338,6 +338,9 @@ void AVehicleTemplatePawn::SetupInCarHUD()
 	}
 }
 
+// Detect an overlap with another AI Actor
+// Here I adjust the players health appropriately by the impact intensity
+
 void AVehicleTemplatePawn::OnOverlapBegin(AActor* MyOverlappedActor, AActor* OtherActor)
 {
 	if (MyOverlappedActor == OtherActor) { return; }
@@ -360,10 +363,17 @@ void AVehicleTemplatePawn::OnOverlapBegin(AActor* MyOverlappedActor, AActor* Oth
 
 		AVehiclePlayerState* pPlayer = (AVehiclePlayerState*)pState->PlayerArray[0];
 
+		// Adjust the health based on the relative velocity of the collision
 		pPlayer->Health = FMath::Max(0.f, pPlayer->Health - (vel * 0.006f));
+
+		// If the health is 0 then we quit the game currently
+		if (pPlayer->Health <= 0.f) {
+			FGenericPlatformMisc::RequestExit(false);
+		}
 	}
 }
 
+// Method to fire a projectile from the front of the player vehicle
 void AVehicleTemplatePawn::Shoot()
 {
 	if (!ProjectileClass) { return; }
@@ -372,6 +382,7 @@ void AVehicleTemplatePawn::Shoot()
 
 	AVehiclePlayerState* pState = (AVehiclePlayerState*)pWorld->GetGameState()->PlayerArray[0];
 
+	// If the player has ammo, instantiate a new projectile
 	if (pState->Ammo > 0) {
 		pState->Ammo--;
 
@@ -383,6 +394,7 @@ void AVehicleTemplatePawn::Shoot()
 
 		AProjectile* pProjectile = pWorld->SpawnActor<AProjectile>(ProjectileClass, location, rotation, params);
 		
+		// Apply an impulse to the projectile actor to propel it forward from the players vehicle
 		if (pProjectile) {
 			USphereComponent* pSphere = Cast<USphereComponent>(pProjectile->GetRootComponent());
 			if (pSphere) {

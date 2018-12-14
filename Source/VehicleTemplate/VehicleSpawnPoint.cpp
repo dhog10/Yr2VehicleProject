@@ -1,5 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+// Used to keep track of potential vehicle spawn points, and spawn vehicles
+// Used by the game state manager
+
 #include "VehicleSpawnPoint.h"
 #include "GameFramework/Actor.h"
 #include "Runtime/Engine/Classes/Engine/World.h"
@@ -26,6 +29,7 @@ void AVehicleSpawnPoint::Tick(float DeltaTime)
 
 }
 
+// Spawn a new AI vehicle at this checkpoints position
 void AVehicleSpawnPoint::SpawnActor() {
 	UWorld* pWorld = GetWorld();
 

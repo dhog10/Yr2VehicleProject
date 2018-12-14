@@ -16,11 +16,13 @@ AProjectile::AProjectile()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	// Intialize a sphere collider
 	USphereComponent* SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("RootComponent"));
 	RootComponent = SphereComponent;
 	SphereComponent->InitSphereRadius(40.0f * scale);
 	SphereComponent->SetCollisionProfileName(TEXT("Pawn"));
 
+	// Initialize a sphere mesh for visual representation
 	UStaticMeshComponent* SphereVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualRepresentation"));
 	SphereVisual->SetupAttachment(RootComponent);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereVisualAsset(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere"));
@@ -63,6 +65,7 @@ void AProjectile::Tick(float DeltaTime)
 	LastVelocity = GetVelocity();
 }
 
+// Applies a physics impulse to AI vehicles which this projectile hits
 void AProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit) {
 	if (!OtherActor) { return; }
 

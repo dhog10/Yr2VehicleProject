@@ -34,21 +34,18 @@ void AVelocityModifier::Tick(float DeltaTime)
 
 }
 
+// Increase the actor velocity on overlap (if it is a vehicle)
 void AVelocityModifier::OnOverlapBegin(AActor* MyOverlappedActor, AActor* OtherActor)
 {
-	print(TEXT("Collide"));
-
 	USkeletalMeshComponent* SM = Cast<USkeletalMeshComponent>(OtherActor->GetRootComponent());
 
 	//If the static mesh is valid apply the given impulse
 	if (SM)
 	{
-		print(TEXT("Impulse"));
 
 		FVector Forward = OtherActor->GetActorForwardVector();
 		SM->AddImpulse(Forward * SM->GetBodyInstance()->GetBodyMass() * VelocityIncrease);
 
 	}
-	else print(TEXT("Not a mesh"));
 }
 

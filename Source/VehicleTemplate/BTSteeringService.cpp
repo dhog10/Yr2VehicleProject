@@ -89,7 +89,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	float NormalDotRight = 0.f;
 	bool HitRight = false;
 	
-	// Trace Direct Right
+	// Trace Direct Right, this is for helping the AI to not scrape against walls
 	bool HitDirectRight = false;
 	AActor* pActorHitDirectRight = NULL;
 
@@ -105,15 +105,6 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 			traceEndPosition, //end
 			ECC_Pawn, //collision channel
 			RV_TraceParams
-		);
-
-		DrawDebugPoint(
-			world,
-			traceEndPosition,
-			20,
-			FColor(255, 0, 255),
-			false,
-			0.03
 		);
 
 		pActorHitDirectRight = RV_Hit.GetActor();
@@ -132,14 +123,6 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		traceEndPosition -= pAIActor->GetActorRightVector() * traceDirectRightDistance;
 		traceEndPosition += pAIActor->GetActorUpVector() * upTraceOffset;
 		traceEndPosition += pAIActor->GetActorForwardVector() * 50.f * (float)i;
-
-		world->LineTraceSingleByChannel(
-			RV_Hit,        //result
-			aiPosition,    //start
-			traceEndPosition, //end
-			ECC_Pawn, //collision channel
-			RV_TraceParams
-		);
 
 		DrawDebugPoint(
 			world,
@@ -162,6 +145,8 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	float SteerHitLeft = -1.f;
 	float SteerClampLeft = 0.f;
 
+	// This loop is used to project multiple traces ahead and at different angles
+	// These different traces reduce the angles at which the AI is blind to obstacles
 	for (float i = 0; i < NumSidewaysChecks; i++) {
 		traceEndPosition = aiPosition + pAIActor->GetActorForwardVector() * ForwardTraceOffset;
 		traceEndPosition += pAIActor->GetActorForwardVector() * traceForwardDistance * (1.f / (i + 1.f));
@@ -174,15 +159,6 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 			traceEndPosition, //end
 			ECC_Pawn, //collision channel
 			RV_TraceParams
-		);
-
-		DrawDebugPoint(
-			world,
-			traceEndPosition,
-			20,
-			FColor(255, 0, 255),
-			false,
-			0.03
 		);
 
 		AActor* pActorHitRight = RV_Hit.GetActor();
@@ -226,15 +202,6 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 			RV_TraceParams
 		);
 
-		DrawDebugPoint(
-			world,
-			traceEndPosition,
-			20,
-			FColor(255, 0, 255),
-			false,
-			0.03
-		);
-
 		AActor* pActorHitLeft = RV_Hit.GetActor();
 		if (pActorHitLeft && pActorHitLeft != PlayerPawn) {
 			HitLeft = true;
@@ -255,6 +222,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		}
 	}
 
+	// If the intensity of the collision detected evaluated to less than the current steering value, clamp this value to avoid the obstacle
 	if (SteerHitRight > -1.f && SteerHitRight > SteerHitLeft) {
 		SteeringValue = FMath::Min(SteerClampRight, SteeringValue);
 	}
@@ -262,6 +230,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		SteeringValue = FMath::Max(SteerClampLeft, SteeringValue);
 	}
 
+	// If a collision was detected directly to the side of the car, clamp the steering value to prevent the vehicle turning into this wall
 	if (HitDirectLeft) {
 		SteeringValue = FMath::Max(0.2f, SteeringValue);
 	}
@@ -271,7 +240,8 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	}
 
 
-	// Trace directly ahead for collisions
+	// Trace directly ahead for collisions, if this trace hits multiple times in a row, it will force the car to reverse
+	// This helps the vehicle get out of being stuck against a wall
 	float forwardRightOffset = 50.f;
 
 	AActor* pActorHitFront = NULL;
@@ -291,15 +261,6 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 			RV_TraceParams
 		);
 
-		DrawDebugPoint(
-			world,
-			traceEndPosition,
-			20,
-			FColor(255, 0, 0),
-			false,
-			0.03
-		);
-
 		AActor* pActorHitFront = RV_Hit.GetActor();
 		if (pActorHitFront && pActorHitFront != PlayerPawn) {
 			HitForward = true;
@@ -307,7 +268,8 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 		}
 	}
 
-	// Trace directly ahead for speed
+	// Trace directly ahead for speed, if these traces hit, we reduce the acceleration of the vehicle
+	// This helps the vehicle slow for turns, and not fly into obstacles at a speed too high to steer at
 	traceEndPosition = aiPosition;
 	traceEndPosition += pAIActor->GetActorForwardVector() * AISpeed + 50.f;
 	traceEndPosition += pAIActor->GetActorUpVector() * 10.f;
@@ -323,6 +285,8 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	pActorHitFront = RV_Hit.GetActor();
 	bool HitForwardSpeed = false;
 
+	// Track how many ticks have we detected a forward collision at
+	// If this amount is high then the vehicle is certainly heading for something solid!
 	if (pActorHitFront && pActorHitFront != PlayerPawn) {
 		pAIController->hitForwardCount++;
 	}
@@ -337,6 +301,9 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 	bool ShouldReverse = forwardDot < -0.3f || HitForward || (AISpeed < 20.f && (SteerHitRight == NumSidewaysChecks -1 || SteerHitLeft == NumSidewaysChecks - 1));// || (HitRight && HitLeft && NormalDotRight < -0.9f && NormalDotLeft < -0.9f);
 	bool ShouldReverseTime = world->GetTimeSeconds() - pAIController->reverseStart < 1.f;
 
+	// Here the vehicle will reverse if the traces previously determined it should
+	// The vehicle will then be forced to reverse for the next second
+	// This prevents the vehicle from spam reversing then accelerating back towards the obstacle it was attempting to reverse away from
 	if (ShouldReverse || ShouldReverseTime){
 		if (SteerHitRight > SteerHitLeft) {
 			SteeringValue = -1.f;
@@ -362,6 +329,7 @@ void UBTSteeringService::TickNode(UBehaviorTreeComponent & OwnerComp, uint8 * No
 
 	if (distanceToTarget < 5000.f) {
 		// Reduce AI speed if player has stopped
+		// This prevents the AI from running past the player at full speed, and assists it in following the player reasonably
 		float PlayerSpeed = PlayerPawn->GetVelocity().Size();
 		if (AISpeed > PlayerSpeed * 1.5f) { ThrottleValue = FMath::Max(ThrottleValue * 0.3f, 0.6f); }
 	}
